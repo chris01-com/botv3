@@ -54,21 +54,21 @@ class QuestCommands(commands.Cog):
         }
         return colors.get(status, discord.Color.light_grey())
 
-    @app_commands.command(name="setup_channels", description="Setup quest channels for the server")
-    @app_commands.describe(
-        quest_list_channel="Channel for quest listings",
-        quest_accept_channel="Channel for quest acceptance",
-        quest_submit_channel="Channel for quest submissions",
-        quest_approval_channel="Channel for quest approvals",
-        notification_channel="Channel for notifications"
-    )
-    async def setup_channels(self, interaction: discord.Interaction,
-                             quest_list_channel: discord.TextChannel,
-                             quest_accept_channel: discord.TextChannel,
-                             quest_submit_channel: discord.TextChannel,
-                             quest_approval_channel: discord.TextChannel,
-                             notification_channel: discord.TextChannel):
-        """Setup quest channels for the server"""
+@app_commands.command(name="setup_channels", description="Setup quest channels for the server")
+@app_commands.describe(
+    quest_list_channel="Channel for quest listings",
+    quest_accept_channel="Channel for quest acceptance",
+    quest_submit_channel="Channel for quest submissions",
+    quest_approval_channel="Channel for quest approvals",
+    notification_channel="Channel for notifications"
+)
+async def setup_channels(self, interaction: discord.Interaction,
+                         quest_list_channel: discord.TextChannel,
+                         quest_accept_channel: discord.TextChannel,
+                         quest_submit_channel: discord.TextChannel,
+                         quest_approval_channel: discord.TextChannel,
+                         notification_channel: discord.TextChannel):
+    try:
         if not has_quest_creation_permission(interaction.user, interaction.guild):
             await interaction.response.send_message("You don't have permission to setup channels!", ephemeral=True)
             return
@@ -79,38 +79,18 @@ class QuestCommands(commands.Cog):
             color=discord.Color.green()
         )
         
-        embed.add_field(
-            name="Quest List Channel",
-            value=f"{quest_list_channel.mention}\nNew quests will be posted here",
-            inline=False
-        )
-        embed.add_field(
-            name="Quest Accept Channel",
-            value=f"{quest_accept_channel.mention}\nUse this channel to accept quests",
-            inline=False
-        )
-        embed.add_field(
-            name="Quest Submit Channel",
-            value=f"{quest_submit_channel.mention}\nSubmit completed quests here",
-            inline=False
-        )
-        embed.add_field(
-            name="Quest Approval Channel",
-            value=f"{quest_approval_channel.mention}\nQuest approvals will be processed here",
-            inline=False
-        )
-        embed.add_field(
-            name="Notification Channel",
-            value=f"{notification_channel.mention}\nGeneral quest notifications will appear here",
-            inline=False
-        )
-
+        embed.add_field(name="Quest List Channel", value=f"{quest_list_channel.mention}\nNew quests will be posted here", inline=False)
+        embed.add_field(name="Quest Accept Channel", value=f"{quest_accept_channel.mention}\nUse this channel to accept quests", inline=False)
+        embed.add_field(name="Quest Submit Channel", value=f"{quest_submit_channel.mention}\nSubmit completed quests here", inline=False)
+        embed.add_field(name="Quest Approval Channel", value=f"{quest_approval_channel.mention}\nQuest approvals will be processed here", inline=False)
+        embed.add_field(name="Notification Channel", value=f"{notification_channel.mention}\nGeneral quest notifications will appear here", inline=False)
+        
         embed.set_footer(text=f"Configured by {interaction.user.display_name}")
         embed.timestamp = datetime.now()
 
         await interaction.response.send_message(embed=embed)
 
-        # Set channels in database after responding
+        # Now save channels to DB (safely)
         await self.channel_config.set_guild_channels(
             interaction.guild.id,
             quest_list_channel.id,
@@ -119,6 +99,10 @@ class QuestCommands(commands.Cog):
             quest_approval_channel.id,
             notification_channel.id
         )
+
+    except Exception as e:
+        print(f"Error in setup_channels: {e}")
+        await interaction.followup.send(f"❌ Error while processing: `{e}`", ephemeral=True)
 
     @app_commands.command(name="create_quest", description="Create a new quest")
     @app_commands.describe(
